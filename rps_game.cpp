@@ -1,7 +1,10 @@
 #include <iostream>
 #include <omp.h>
 #include <random>
+#include <chrono>
+#include <fstream>
 
+// Enumeration for the possible moves in the game
 enum Move
 {
     ROCK,
@@ -9,6 +12,7 @@ enum Move
     SCISSORS
 };
 
+// Function to convert enum Move to its string representation
 const char *moveToString(Move move)
 {
     switch (move)
@@ -24,17 +28,21 @@ const char *moveToString(Move move)
     }
 }
 
+// Function to generate a random move for a player
 Move randomMove()
 {
+    // Thread-local random number generator to avoid conflicts in parallel execution
     static thread_local std::mt19937 generator(omp_get_thread_num());
     std::uniform_int_distribution<int> distribution(0, 2);
     return static_cast<Move>(distribution(generator));
 }
 
+// Function to determine the result of a game based on the moves of the players
 int gameResult(Move a, Move b, Move c)
 {
     int score[3] = {0, 0, 0};
 
+    // Scoring logic based on the rules of Rock-Paper-Scissors
     // Determine the score for each player
     if (a == ROCK && b == SCISSORS)
         score[0]++;
@@ -81,32 +89,55 @@ int gameResult(Move a, Move b, Move c)
 
 int main()
 {
-    int numGames;
-    std::cout << "Enter the number of games: ";
-    std::cin >> numGames;
+    // Open a file to write the benchmark results
+    std::ofstream file("benchmark_results.txt");
 
-    int totalScore = 0;
+    // Define different problem sizes for the benchmark
+    const int problemSizes[] = {1, 10, 100, 1000, 5000, 10000, 50000, 100000};
+    const int numSizes = sizeof(problemSizes) / sizeof(problemSizes[0]);
 
-#pragma omp parallel for reduction(+ : totalScore)
-    for (int i = 0; i < numGames; ++i)
+    for (int s = 0; s < numSizes; ++s)
     {
-        Move player1 = randomMove();
-        Move player2 = randomMove();
-        Move player3 = randomMove();
+        int numGames = problemSizes[s];
+        int totalScore = 0;
 
-        int gameScore = gameResult(player1, player2, player3);
-        totalScore += gameScore;
+        // Start measuring time for benchmark
+        auto start = std::chrono::high_resolution_clock::now();
 
-#pragma omp critical
+        // Parallel for loop to simulate multiple games
+#pragma omp parallel for reduction(+ : totalScore)
+        for (int i = 0; i < numGames; ++i)
         {
-            std::cout << "Game " << i + 1 << ": "
-                      << moveToString(player1) << ", "
-                      << moveToString(player2) << ", "
-                      << moveToString(player3)
-                      << " | Game Score: " << gameScore << std::endl;
+            // Simulate moves for three players
+            Move player1 = randomMove();
+            Move player2 = randomMove();
+            Move player3 = randomMove();
+
+            // Calculate and accumulate game score
+            int gameScore = gameResult(player1, player2, player3);
+            totalScore += gameScore;
+
+            // Critical section to ensure proper console output
+#pragma omp critical
+            {
+                std::cout << "Game " << i + 1 << ": "
+                          << moveToString(player1) << ", "
+                          << moveToString(player2) << ", "
+                          << moveToString(player3)
+                          << " | Game Score: " << gameScore << std::endl;
+            }
         }
+
+        // Stop measuring time after simulations
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> duration = end - start;
+
+        // Output and write the benchmark results
+        std::cout << "Problem Size: " << numGames << ", Execution Time: " << duration.count() << " milliseconds" << std::endl;
+        file << "Problem Size: " << numGames << ", Execution Time: " << duration.count() << " milliseconds\n";
     }
 
-    std::cout << "Total Score: " << totalScore << std::endl;
+    // Close the file after writing all benchmark results
+    file.close();
     return 0;
 }

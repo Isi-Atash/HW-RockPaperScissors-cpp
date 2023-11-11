@@ -1,0 +1,8 @@
+Problem Size: 1, Execution Time: 1.2069 milliseconds
+Problem Size: 10, Execution Time: 2.7545 milliseconds
+Problem Size: 100, Execution Time: 22.498 milliseconds
+Problem Size: 1000, Execution Time: 226.647 milliseconds
+Problem Size: 5000, Execution Time: 1151.58 milliseconds
+Problem Size: 10000, Execution Time: 2337.94 milliseconds
+Problem Size: 50000, Execution Time: 11542.7 milliseconds
+Problem Size: 100000, Execution Time: 23165.9 milliseconds
